@@ -39,7 +39,11 @@ class BertVector:
         self.max_seq_length = args.max_seq_len
         self.layer_indexes = args.layer_indexes
         self.gpu_memory_fraction = 1
-        self.graph_path = optimize_graph()
+        if os.path.exists(args.graph_file):
+            self.graph_path = args.graph_file
+        else:
+            self.graph_path = optimize_graph()
+
         self.tokenizer = tokenization.FullTokenizer(vocab_file=args.vocab_file, do_lower_case=True)
         self.batch_size = batch_size
         self.estimator = self.get_estimator()
@@ -47,7 +51,6 @@ class BertVector:
         self.output_queue = Queue(maxsize=1)
         self.predict_thread = Thread(target=self.predict_from_queue, daemon=True)
         self.predict_thread.start()
-        self.sentence_len = 0
 
     def get_estimator(self):
         from tensorflow.python.estimator.estimator import Estimator
@@ -76,7 +79,7 @@ class BertVector:
         config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
 
         return Estimator(model_fn=model_fn, config=RunConfig(session_config=config),
-                         params={'batch_size': self.batch_size})
+                         params={'batch_size': self.batch_size}, model_dir='../tmp')
 
     def predict_from_queue(self):
         prediction = self.estimator.predict(input_fn=self.queue_predict_input_fn, yield_single_examples=False)
@@ -84,7 +87,6 @@ class BertVector:
             self.output_queue.put(i)
 
     def encode(self, sentence):
-        self.sentence_len = len(sentence)
         self.input_queue.put(sentence)
         prediction = self.output_queue.get()['encodes']
         return prediction
@@ -98,7 +100,7 @@ class BertVector:
                           'input_mask': tf.int32,
                           'input_type_ids': tf.int32},
             output_shapes={
-                'unique_ids': (self.sentence_len,),
+                'unique_ids': (None,),
                 'input_ids': (None, self.max_seq_length),
                 'input_mask': (None, self.max_seq_length),
                 'input_type_ids': (None, self.max_seq_length)}).prefetch(10))
@@ -332,7 +334,8 @@ class BertVector:
 
 if __name__ == "__main__":
     bert = BertVector()
-    # while True:
-    #     question = input('question: ')
-    vectors = bert.encode(['你好', '哈哈'])
-    print(str(vectors))
+
+    while True:
+        question = input('question: ')
+        v = bert.encode([question])
+        print(str(v))

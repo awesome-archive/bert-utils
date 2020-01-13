@@ -2,6 +2,16 @@
 
 本文基于Google开源的[BERT](https://github.com/google-research/bert)代码进行了进一步的简化，方便生成句向量与做文本分类
 
+---
+
+***** New July 1st, 2019 *****
++ 修改句向量`graph`文件的生成方式，提升句向量启动速度。不再每次以临时文件的方式生成，首次执行extract_feature.py时会创建`tmp/result/graph`，
+再次执行时直接读取该文件，如果`args.py`文件内容有修改，需要删除`tmp/result/graph`文件
++ 修复同时启动两个进程生成句向量时代码报错的bug
++ 修改文本匹配数据集为QA_corpus，该份数据相比于蚂蚁金服的数据更有权威性
+
+---
+
 1、下载BERT中文模型 
 
 下载地址: https://storage.googleapis.com/bert_models/2018_11_03/chinese_L-12_H-768_A-12.zip
@@ -51,7 +61,8 @@ import tensorflow as tf
 
 bs = BertSim()
 bs.set_mode(tf.estimator.ModeKeys.PREDICT)
-bs.test
+bs.test()
 ```
 
-5、DEMO中自带了蚂蚁金服的测试数据供大家使用
+5、DEMO中自带了QA_corpus数据集，这里给出[地址](http://icrc.hitsz.edu.cn/info/1037/1162.htm)，
+该份数据的生成方式请参阅附件中的论文`The BQ Corpus.pdf`
